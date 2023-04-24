@@ -1,0 +1,16 @@
+version: "3.9"
+
+services:
+  postage:
+    environment:
+      POSTGRES_DB: postage
+      POSTGRES_PASSWORD: postgres
+    image: apache/age:PG13_latest
+    platform: linux/amd64
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg_data:/var/lib/postgresql/data
+
+volumes:
+  pg_data:
