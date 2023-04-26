@@ -16,23 +16,27 @@ defmodule PostgrexAgtype.DataCase do
 
     {:ok, conn} = Postgrex.start_link(opts)
 
-    Postgrex.query!(conn, "CREATE EXTENSION IF NOT EXISTS age", [])
-
-    Postgrex.query!(
-      conn,
-      "ALTER ROLE postgres SET search_path = ag_catalog, \"$user\", public",
-      []
-    )
-
-    Postgrex.query!(conn, "LOAD 'age'", [])
+    exec!(conn, "CREATE EXTENSION IF NOT EXISTS age")
+    exec!(conn, "GRANT USAGE ON SCHEMA ag_catalog TO #{opts[:username]}")
+    exec!(conn, "ALTER ROLE #{opts[:username]} SET search_path = ag_catalog, \"$user\", public")
+    exec!(conn, "SET search_path = ag_catalog, \"$user\", public")
+    exec!(conn, "LOAD 'age'")
 
     %{conn: conn}
   end
 
   def create_graph(%{conn: conn}) do
-    Postgrex.query!(conn, "SELECT * FROM drop_graph('#{@graph_name}', true)", [])
-    Postgrex.query!(conn, "SELECT * FROM create_graph('#{@graph_name}')", [])
+    try do
+      exec!(conn, "SELECT * FROM drop_graph('#{@graph_name}', true)")
+    rescue
+      _ in Postgrex.Error ->
+        nil
+    end
+
+    exec!(conn, "SELECT * FROM ag_catalog.create_graph('#{@graph_name}')")
 
     %{graph_name: @graph_name}
   end
+
+  defp exec!(conn, query), do: Postgrex.query!(conn, query, [])
 end
