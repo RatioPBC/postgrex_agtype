@@ -20,8 +20,9 @@ defmodule PostgrexAgtype.MixProject do
 
   defp deps do
     [
-      {:postgrex, "~> 0.17"},
-      {:jason, "~> 1.4"}
+      {:jason, "~> 1.4"},
+      {:libgraph, "~> 0.16"},
+      {:postgrex, "~> 0.17"}
     ]
   end
 

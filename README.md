@@ -1,6 +1,6 @@
 # PostgrexAgtype
 
-**TODO: Add description**
+A Postgrex.Extension to support Apache AGE `agtype` using [`libgraph`](https://github.com/bitwalker/libgraph).
 
 ## Installation
 
@@ -14,8 +14,3 @@ def deps do
   ]
 end
 ```
-
-Documentation can be generated with [ExDoc](https://github.com/elixir-lang/ex_doc)
-and published on [HexDocs](https://hexdocs.pm). Once published, the docs can
-be found at <https://hexdocs.pm/postgrex_agtype>.
-
