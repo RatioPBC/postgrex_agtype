@@ -17,7 +17,13 @@ defmodule PostgrexAgtype.DataCase do
     {:ok, conn} = Postgrex.start_link(opts)
 
     Postgrex.query!(conn, "CREATE EXTENSION IF NOT EXISTS age", [])
-    Postgrex.query!(conn, "ALTER ROLE postgres SET search_path = ag_catalog, \"$user\", public", [])
+
+    Postgrex.query!(
+      conn,
+      "ALTER ROLE postgres SET search_path = ag_catalog, \"$user\", public",
+      []
+    )
+
     Postgrex.query!(conn, "LOAD 'age'", [])
 
     %{conn: conn}
