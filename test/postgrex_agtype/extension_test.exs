@@ -253,6 +253,7 @@ defmodule PostgrexAgtype.ExtensionTest do
          expected:
            Graph.new()
            |> Graph.add_vertex(0, %{"label" => "label_name_1", "properties" => %{"i" => 0}})
+           |> Graph.add_vertex(1, %{"label" => "label_name_2", "properties" => %{}})
            |> Graph.add_edge(
              Graph.Edge.new(0, 1,
                id: 2,
@@ -263,7 +264,6 @@ defmodule PostgrexAgtype.ExtensionTest do
                }
              )
            )
-           |> Graph.add_vertex(1, %{"label" => "label_name_2", "properties" => %{}})
     test "casting list to path", ctx do
       test_cypher_query(ctx)
     end

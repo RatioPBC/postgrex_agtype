@@ -74,15 +74,31 @@ defmodule PostgrexAgtype.Extension do
   end
 
   @spec build_path(list()) :: Graph.t()
-  defp build_path(path), do: build_path(path, Graph.new())
+  defp build_path(path), do: build_path(path, [], Graph.new())
 
-  @spec build_path(list, Graph.t()) :: Graph.t()
-  defp build_path([], graph), do: graph
 
-  defp build_path([entity | rest], graph) do
-    graph = convert_agtype(entity, graph)
+  @spec build_path(list(), list(), Graph.t()) :: Graph.t()
+  defp build_path([], [], graph), do: graph
 
-    build_path(rest, graph)
+  defp build_path([], [edge | rest], graph) do
+    graph = convert_agtype(edge, graph)
+
+    build_path([], rest, graph)
+  end
+
+  defp build_path([entity | rest], edges, graph) do
+    case Map.fetch(entity, "_agtype") do
+      {:ok, "vertex"} ->
+        graph = convert_agtype(entity, graph)
+
+        build_path(rest, edges, graph)
+
+      {:ok, "edge"} ->
+        build_path(rest, [entity | edges], graph)
+
+      :error ->
+        raise ArgumentError, "_agtype key not found"
+    end
   end
 
   @spec convert_agtype(map(), Graph.t()) :: Graph.t()
