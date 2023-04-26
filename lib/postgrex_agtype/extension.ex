@@ -76,7 +76,6 @@ defmodule PostgrexAgtype.Extension do
   @spec build_path(list()) :: Graph.t()
   defp build_path(path), do: build_path(path, [], Graph.new())
 
-
   @spec build_path(list(), list(), Graph.t()) :: Graph.t()
   defp build_path([], [], graph), do: graph
 
