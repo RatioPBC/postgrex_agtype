@@ -1,6 +1,5 @@
 defmodule PostgrexAgtype.DataCase do
-  @moduledoc """
-  """
+  @moduledoc false
 
   use ExUnit.CaseTemplate
 
