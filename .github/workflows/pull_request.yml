@@ -1,0 +1,53 @@
+name: pull request
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  ci:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+      - uses: erlef/setup-beam@v1
+        with:
+          otp-version: "25.3"
+          elixir-version: "1.14.4"
+
+      - name: install docker compose v2
+        run: |
+           DOCKER_CONFIG=${DOCKER_CONFIG:-$HOME/.docker}
+           mkdir -p $DOCKER_CONFIG/cli-plugins
+           curl -SL https://github.com/docker/compose/releases/download/v2.17.3/docker-compose-linux-x86_64 -o $DOCKER_CONFIG/cli-plugins/docker-compose
+           chmod +x $DOCKER_CONFIG/cli-plugins/docker-compose
+           docker compose version
+
+      - uses: actions/cache@v2
+        id: cache-build-elixir-deps
+        with:
+          path: |
+            _build
+            deps
+          key: ${{ runner.os }}-mix-deps-${{ hashFiles(format('{0}{1}', github.workspace, '/mix.lock')) }}
+      - name: build elixir deps
+        if: steps.cache-build-elixir-deps.outputs.cache-hit != 'true'
+        env:
+          MIX_ENV: test
+        run: mix do deps.get, deps.compile
+
+      - name: start postgres/age
+        run: |
+          docker compose up -d
+          sleep 3
+
+      - name: run formatter
+        run: mix format --check-formatted
+      - name: run credo
+        env:
+          MIX_ENV: test
+        run: mix credo --strict
+      - name: run tests
+        run: mix test
+
+      - name: cleanup
+        run: docker compose down -v
