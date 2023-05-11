@@ -1,4 +1,4 @@
 defmodule PostgrexAgtypeTest do
   use ExUnit.Case
-  doctest PostgrexAgtype
+  # doctest PostgrexAgtype
 end

@@ -101,7 +101,7 @@ defmodule PostgrexAgtype.Extension do
   end
 
   @spec convert_agtype(map(), Graph.t()) :: Graph.t()
-  defp convert_agtype(%{"_agtype" => "vertex"} = entity, graph) when is_map(entity) do
+  defp convert_agtype(%{"_agtype" => "vertex"} = entity, graph) do
     label =
       entity
       |> Map.take(["label", "properties"])
@@ -110,7 +110,7 @@ defmodule PostgrexAgtype.Extension do
     Graph.add_vertex(graph, Map.fetch!(entity, "id"), label)
   end
 
-  defp convert_agtype(%{"_agtype" => "edge"} = entity, graph) when is_map(entity) do
+  defp convert_agtype(%{"_agtype" => "edge"} = entity, graph) do
     label =
       entity
       |> Map.drop(["_agtype", "start_id", "end_id"])

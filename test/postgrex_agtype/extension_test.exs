@@ -28,7 +28,7 @@ defmodule PostgrexAgtype.ExtensionTest do
     end
   end
 
-  describe "handles simple data type" do
+  describe "decodes simple data types" do
     setup [:create_graph]
 
     @tag cypher: "RETURN NULL", expected: nil
@@ -57,7 +57,7 @@ defmodule PostgrexAgtype.ExtensionTest do
     end
   end
 
-  describe "handles composite data type" do
+  describe "decodes composite data types" do
     setup [:create_graph]
 
     @tag cypher: """
@@ -267,5 +267,70 @@ defmodule PostgrexAgtype.ExtensionTest do
     test "casting list to path", ctx do
       test_cypher_query(ctx)
     end
+
+    test "adds multiple returned entities to single Graph", %{conn: conn, graph_name: graph_name} do
+      create_alpha_query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        CREATE (a:Alpha)
+        RETURN ID(a)
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[alpha_id]]} = Postgrex.query!(conn, create_alpha_query, [])
+
+      create_betas_query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        MATCH (a:Alpha)
+        WHERE ID(a) = #{alpha_id}
+        CREATE (b1:Beta {bid: 1})-[e1:Rel]->(a), (b2:Beta {bid: 2})-[e2:Rel]->(a)
+        RETURN [ID(b1), ID(b2), ID(e1), ID(e2)]
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[[bid1, bid2, eid1, eid2]]]} = Postgrex.query!(conn, create_betas_query, [])
+
+      query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        MATCH (b1:Beta)-[e1:Rel]->(a:Alpha), (b2:Beta)-[e2:Rel]->(a:Alpha)
+        WHERE ID(e1) = #{eid1} AND ID(e2) = #{eid2}
+        RETURN [b1, e1, a, b2, e2]
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[observed]]} = Postgrex.query!(conn, query, [])
+
+      expected =
+        Graph.new()
+        |> Graph.add_vertex(alpha_id, %{"label" => "Alpha", "properties" => %{}})
+        |> Graph.add_vertex(bid1, %{"label" => "Beta", "properties" => %{"bid" => 1}})
+        |> Graph.add_vertex(bid2, %{"label" => "Beta", "properties" => %{"bid" => 2}})
+        |> Graph.add_edge(bid1, alpha_id, label: %{"id" => eid1, "label" => "Rel", "properties" => %{}})
+        |> Graph.add_edge(bid2, alpha_id, label: %{"id" => eid2, "label" => "Rel", "properties" => %{}})
+
+      assert expected == observed
+    end
   end
+
+  # describe "encodes graph structs" do
+  #   setup [:create_graph]
+
+  #   test "with a single vertex", %{conn: conn, graph_name: graph_name} do
+  #     graph =
+  #       Graph.new()
+  #       |> Graph.add_vertex(0, %{"label" => "label_name", "properties" => %{"i" => 0}})
+
+  #     query = """
+  #     SELECT *
+  #     FROM cypher('#{graph_name}', $$
+  #       #{cypher}
+  #     $$) AS (result agtype)
+  #     """
+
+  #     assert %Postgrex.Result{rows: [[observed]]} = Postgrex.query!(conn, query, [])
+  #     assert expected == observed
+  #   end
+  # end
 end
