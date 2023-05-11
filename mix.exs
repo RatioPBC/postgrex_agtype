@@ -21,7 +21,6 @@ defmodule PostgrexAgtype.MixProject do
   defp deps do
     [
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
-      {:ex_cypher, "~> 0.3"},
       {:dialyxir, "~> 1.3", only: [:dev, :test], runtime: false},
       {:jason, "~> 1.4"},
       {:libgraph, "~> 0.16"},
