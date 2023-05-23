@@ -1,7 +1,7 @@
 defmodule PostgrexAgtype.ExtensionTest do
   use PostgrexAgtype.DataCase
 
-  setup [:setup_postgrex]
+  setup [:setup_postgrex, :create_graph]
 
   def test_cypher_query(context) do
     %{
@@ -58,8 +58,6 @@ defmodule PostgrexAgtype.ExtensionTest do
   end
 
   describe "decodes composite data types" do
-    setup [:create_graph]
-
     @tag cypher: """
          WITH [0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10] as lst
          RETURN lst
@@ -268,7 +266,7 @@ defmodule PostgrexAgtype.ExtensionTest do
       test_cypher_query(ctx)
     end
 
-    test "adds multiple returned entities to single Graph", %{conn: conn, graph_name: graph_name} do
+    test "returns single Graph for single row result", %{conn: conn, graph_name: graph_name} do
       create_alpha_query = """
       SELECT *
       FROM cypher('#{graph_name}', $$
@@ -289,7 +287,8 @@ defmodule PostgrexAgtype.ExtensionTest do
       $$) AS (result agtype)
       """
 
-      %Postgrex.Result{rows: [[[bid1, bid2, eid1, eid2]]]} = Postgrex.query!(conn, create_betas_query, [])
+      %Postgrex.Result{rows: [[[bid1, bid2, eid1, eid2]]]} =
+        Postgrex.query!(conn, create_betas_query, [])
 
       query = """
       SELECT *
@@ -307,8 +306,56 @@ defmodule PostgrexAgtype.ExtensionTest do
         |> Graph.add_vertex(alpha_id, %{"label" => "Alpha", "properties" => %{}})
         |> Graph.add_vertex(bid1, %{"label" => "Beta", "properties" => %{"bid" => 1}})
         |> Graph.add_vertex(bid2, %{"label" => "Beta", "properties" => %{"bid" => 2}})
-        |> Graph.add_edge(bid1, alpha_id, label: %{"id" => eid1, "label" => "Rel", "properties" => %{}})
-        |> Graph.add_edge(bid2, alpha_id, label: %{"id" => eid2, "label" => "Rel", "properties" => %{}})
+        |> Graph.add_edge(bid1, alpha_id,
+          label: %{"id" => eid1, "label" => "Rel", "properties" => %{}}
+        )
+        |> Graph.add_edge(bid2, alpha_id,
+          label: %{"id" => eid2, "label" => "Rel", "properties" => %{}}
+        )
+
+      assert expected == observed
+    end
+
+    test "returns a graph for each row in result", %{conn: conn, graph_name: graph_name} do
+      create_alpha_query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        CREATE (a:Alpha)
+        RETURN ID(a)
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[alpha_id]]} = Postgrex.query!(conn, create_alpha_query, [])
+
+      create_beta_query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        CREATE (b:Beta {bid: 1})
+        RETURN ID(b)
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[beta_id]]} = Postgrex.query!(conn, create_beta_query, [])
+
+      query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        MATCH (n)
+        RETURN n
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: observed} = Postgrex.query!(conn, query, [])
+
+      expected = [
+        [Graph.add_vertex(Graph.new(), alpha_id, %{"label" => "Alpha", "properties" => %{}})],
+        [
+          Graph.add_vertex(Graph.new(), beta_id, %{
+            "label" => "Beta",
+            "properties" => %{"bid" => 1}
+          })
+        ]
+      ]
 
       assert expected == observed
     end

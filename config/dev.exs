@@ -6,6 +6,6 @@ config :postgrex_agtype,
     port: 5432,
     username: "postgres",
     password: "postgres",
-    database: "postage",
+    database: "postgrex_agtype_dev",
     types: PostgrexAgtype.PostgresTypes
   ]
