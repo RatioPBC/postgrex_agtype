@@ -1,6 +1,6 @@
-defmodule Age.Node do
+defmodule Age.Vertex do
   @moduledoc """
-  Struct representing a Node in an AGE graph, with underlying libgraph support.
+  Struct representing a Vertex in an AGE graph, with underlying libgraph support.
 
   `alias`, `label`, and `properties` are kept in a map that is the single
   vertex label value of a vertex in the `graph`.
@@ -9,23 +9,23 @@ defmodule Age.Node do
   defstruct [:id, :graph]
 
   @typedoc """
-  `id` is the internal ID of an AGE node.
+  `id` is the internal ID of an AGE vertex.
   """
   @type id :: pos_integer()
 
   @typedoc """
-  `alias` is an optional atom or string of the alias of an AGE node, used for
+  `alias` is an optional atom or string of the alias of an AGE vertex, used for
   building cypher queries.
   """
   @type alias :: atom() | String.t() | nil
 
   @typedoc """
-  `label` is a string of the label of an AGE node.
+  `label` is a string of the label of an AGE vertex.
   """
   @type label :: String.t()
 
   @typedoc """
-  `properties` is a map with the KV attributes of an AGE node.
+  `properties` is a map with the KV attributes of an AGE vertex.
   """
   @type properties :: %{optional(String.t()) => term()}
 
@@ -34,7 +34,7 @@ defmodule Age.Node do
           graph: Graph.t()
         }
 
-  defmodule NodeError do
+  defmodule VertexError do
     @moduledoc false
 
     defmacro __using__(opts) do
@@ -44,8 +44,8 @@ defmodule Age.Node do
         defexception [:message, :graph, :id]
 
         @impl true
-        def exception(node) do
-          message = "#{unquote(message)} - #{node.id} in #{inspect(node.graph)}"
+        def exception(vertex) do
+          message = "#{unquote(message)} - #{vertex.id} in #{inspect(vertex.graph)}"
           %__MODULE__{message: message}
         end
       end
@@ -57,7 +57,7 @@ defmodule Age.Node do
     Empty label list found on a libgraph vertex.
     """
 
-    use NodeError, message: "empty list encountered"
+    use VertexError, message: "empty list encountered"
   end
 
   defmodule MultipleVertexLabelsError do
@@ -65,7 +65,7 @@ defmodule Age.Node do
     Multiple labels found on a libgraph vertex.
     """
 
-    use NodeError, message: "list with length > 1 encountered"
+    use VertexError, message: "list with length > 1 encountered"
   end
 
   @doc """
@@ -100,56 +100,57 @@ defmodule Age.Node do
   end
 
   @doc """
-  Returns the AGE node alias stored with this vertex.
+  Returns the AGE vertex alias stored with this libgraph vertex.
   """
   @spec alias(t()) :: alias()
-  def alias(%__MODULE__{} = node) do
-    node
+  def alias(%__MODULE__{} = vertex) do
+    vertex
     |> fetch_vertex_label!()
     |> Map.fetch!("alias")
   end
 
   @doc """
-  Returns the AGE node label stored with this vertex.
+  Returns the AGE vertex label stored with this libgraph vertex.
   """
   @spec label(t()) :: label()
-  def label(%__MODULE__{} = node), do: fetch_vertex_label_key!(node, "label")
+  def label(%__MODULE__{} = vertex), do: fetch_vertex_label_key!(vertex, "label")
 
   @doc """
-  Returns the AGE node properties(keys/values) stored with this vertex.
+  Returns the AGE vertex properties(keys/values) stored with this libgraph
+  vertex.
   """
   @spec properties(t()) :: properties()
-  def properties(%__MODULE__{} = node), do: fetch_vertex_label_key!(node, "properties")
+  def properties(%__MODULE__{} = vertex), do: fetch_vertex_label_key!(vertex, "properties")
 
-  defp fetch_vertex_label_key!(node, key) do
-    node
+  defp fetch_vertex_label_key!(vertex, key) do
+    vertex
     |> fetch_vertex_label!()
     |> Map.fetch!(key)
   end
 
-  defp fetch_vertex_label!(%__MODULE__{id: id, graph: graph} = node) do
+  defp fetch_vertex_label!(%__MODULE__{id: id, graph: graph} = vertex) do
     case Graph.vertex_labels(graph, id) do
       [] ->
-        raise EmptyVertexLabelsError, node
+        raise EmptyVertexLabelsError, vertex
 
       [label] ->
         label
 
       [_ | _] ->
-        raise MultipleVertexLabelsError, node
+        raise MultipleVertexLabelsError, vertex
     end
   end
 
   @doc """
-  Generate cypher for this Node.
+  Generate cypher for this Vertex.
   """
   @spec to_cypher(t(), alias()) :: String.t()
-  def to_cypher(%__MODULE__{} = node, alias \\ nil) do
-    alias = alias || __MODULE__.alias(node)
-    if is_nil(alias), do: raise(ArgumentError, "node alias value required")
+  def to_cypher(%__MODULE__{} = vertex, alias \\ nil) do
+    alias = alias || __MODULE__.alias(vertex)
+    if is_nil(alias), do: raise(ArgumentError, "vertex alias value required")
 
     props =
-      node
+      vertex
       |> properties()
       |> Enum.map_join(",", fn {k, v} -> "#{k}:#{Age.quote_string(v)}" end)
       |> then(fn
@@ -160,6 +161,6 @@ defmodule Age.Node do
           " {" <> props <> "}"
       end)
 
-    "(" <> to_string(alias) <> ":" <> label(node) <> props <> ")"
+    "(" <> to_string(alias) <> ":" <> label(vertex) <> props <> ")"
   end
 end
