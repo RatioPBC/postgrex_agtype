@@ -2,11 +2,10 @@ defmodule Age.Node do
   @moduledoc """
   Struct representing a Node in an AGE graph, with underlying libgraph support.
 
-  `alias`, `id`, `label`, and `properties` are kept in a map that is the single
+  `alias`, `label`, and `properties` are kept in a map that is the single
   vertex label value of a vertex in the `graph`.
   """
 
-  # defstruct [:id, :graph, :alias, :label, properties: %{}]
   defstruct [:id, :graph]
 
   @typedoc """
@@ -33,10 +32,6 @@ defmodule Age.Node do
   @type t :: %__MODULE__{
           id: id(),
           graph: Graph.t()
-          # graph: Graph.t(),
-          # alias: alias(),
-          # label: label(),
-          # properties: properties()
         }
 
   defmodule NodeError do
@@ -88,7 +83,6 @@ defmodule Age.Node do
         Graph.add_vertex(graph, id, vertex_label)
       end
 
-    # %__MODULE__{id: id, graph: graph, alias: alias, label: label, properties: properties}
     %__MODULE__{id: id, graph: graph}
   end
 
@@ -102,10 +96,6 @@ defmodule Age.Node do
       raise ArgumentError, "given graph does not contain vertex: #{id}"
     end
 
-    # %{"alias" => alias, "label" => label, "properties" => properties} =
-    #   fetch_vertex_label!(%__MODULE__{id: id, graph: graph})
-
-    # %__MODULE__{id: id, graph: graph, alias: alias, label: label, properties: properties}
     %__MODULE__{id: id, graph: graph}
   end
 
