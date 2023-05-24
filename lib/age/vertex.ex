@@ -8,29 +8,8 @@ defmodule Age.Vertex do
 
   defstruct [:id, :graph]
 
-  @typedoc """
-  `id` is the internal ID of an AGE vertex.
-  """
-  @type id :: pos_integer()
-
-  @typedoc """
-  `alias` is an optional atom or string of the alias of an AGE vertex, used for
-  building cypher queries.
-  """
-  @type alias :: atom() | String.t() | nil
-
-  @typedoc """
-  `label` is a string of the label of an AGE vertex.
-  """
-  @type label :: String.t()
-
-  @typedoc """
-  `properties` is a map with the KV attributes of an AGE vertex.
-  """
-  @type properties :: %{optional(String.t()) => term()}
-
   @type t :: %__MODULE__{
-          id: id(),
+          id: Age.id(),
           graph: Graph.t()
         }
 
@@ -69,8 +48,9 @@ defmodule Age.Vertex do
   end
 
   @doc """
+  Returns struct with updated graph containing this vertex and its attributes.
   """
-  @spec new(Graph.t(), id(), label(), properties(), alias()) :: t()
+  @spec new(Graph.t(), Age.id(), Age.label(), Age.properties(), Age.alias()) :: t()
   def new(graph, id, label, properties, alias \\ nil) do
     vertex_label = %{"alias" => alias, "label" => label, "properties" => properties}
 
@@ -90,7 +70,7 @@ defmodule Age.Vertex do
   Returns struct for given graph and vertex id, raising if the vertex is not
   part of the graph.
   """
-  @spec from(Graph.t(), id()) :: t()
+  @spec from(Graph.t(), Age.id()) :: t()
   def from(graph, id) do
     unless Graph.has_vertex?(graph, id) do
       raise ArgumentError, "given graph does not contain vertex: #{id}"
@@ -102,24 +82,20 @@ defmodule Age.Vertex do
   @doc """
   Returns the AGE vertex alias stored with this libgraph vertex.
   """
-  @spec alias(t()) :: alias()
-  def alias(%__MODULE__{} = vertex) do
-    vertex
-    |> fetch_vertex_label!()
-    |> Map.fetch!("alias")
-  end
+  @spec alias(t()) :: Age.alias()
+  def alias(%__MODULE__{} = vertex), do: fetch_vertex_label_key!(vertex, "alias")
 
   @doc """
   Returns the AGE vertex label stored with this libgraph vertex.
   """
-  @spec label(t()) :: label()
+  @spec label(t()) :: Age.label()
   def label(%__MODULE__{} = vertex), do: fetch_vertex_label_key!(vertex, "label")
 
   @doc """
   Returns the AGE vertex properties(keys/values) stored with this libgraph
   vertex.
   """
-  @spec properties(t()) :: properties()
+  @spec properties(t()) :: Age.properties()
   def properties(%__MODULE__{} = vertex), do: fetch_vertex_label_key!(vertex, "properties")
 
   defp fetch_vertex_label_key!(vertex, key) do
@@ -144,7 +120,7 @@ defmodule Age.Vertex do
   @doc """
   Generate cypher for this Vertex.
   """
-  @spec to_cypher(t(), alias()) :: String.t()
+  @spec to_cypher(t(), Age.alias()) :: String.t()
   def to_cypher(%__MODULE__{} = vertex, alias \\ nil) do
     alias = alias || __MODULE__.alias(vertex)
     if is_nil(alias), do: raise(ArgumentError, "vertex alias value required")
@@ -152,14 +128,7 @@ defmodule Age.Vertex do
     props =
       vertex
       |> properties()
-      |> Enum.map_join(",", fn {k, v} -> "#{k}:#{Age.quote_string(v)}" end)
-      |> then(fn
-        "" = props ->
-          props
-
-        props ->
-          " {" <> props <> "}"
-      end)
+      |> Age.map_to_cypher()
 
     "(" <> to_string(alias) <> ":" <> label(vertex) <> props <> ")"
   end

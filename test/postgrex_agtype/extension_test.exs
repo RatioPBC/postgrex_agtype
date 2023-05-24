@@ -359,6 +359,48 @@ defmodule PostgrexAgtype.ExtensionTest do
 
       assert expected == observed
     end
+
+    test "returns single Graph for single edge result", %{conn: conn, graph_name: graph_name} do
+      create_alpha_query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        CREATE (a:Alpha)
+        RETURN ID(a)
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[alpha_id]]} = Postgrex.query!(conn, create_alpha_query, [])
+
+      create_betas_query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        MATCH (a:Alpha)
+        WHERE ID(a) = #{alpha_id}
+        CREATE (b1:Beta {bid: 1})-[e1:Rel]->(a)
+        RETURN [ID(b1), ID(e1)]
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[[bid, eid]]]} = Postgrex.query!(conn, create_betas_query, [])
+
+      query = """
+      SELECT *
+      FROM cypher('#{graph_name}', $$
+        MATCH (b:Beta)-[e:Rel]->(a:Alpha)
+        WHERE ID(e) = #{eid}
+        RETURN e
+      $$) AS (result agtype)
+      """
+
+      %Postgrex.Result{rows: [[observed]]} = Postgrex.query!(conn, query, [])
+
+      expected =
+        Graph.add_edge(Graph.new(), bid, alpha_id,
+          label: %{"id" => eid, "label" => "Rel", "properties" => %{}}
+        )
+
+      assert expected == observed
+    end
   end
 
   # describe "encodes graph structs" do

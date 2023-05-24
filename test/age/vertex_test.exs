@@ -13,9 +13,9 @@ defmodule Age.VertexTest do
 
   describe "new/4" do
     test "returns struct" do
-      n = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
+      v = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
 
-      assert %Vertex{id: @valid_id, graph: %Graph{} = g} = n
+      assert %Vertex{id: @valid_id, graph: %Graph{} = g} = v
       assert Graph.has_vertex?(g, @valid_id)
     end
 
@@ -23,29 +23,29 @@ defmodule Age.VertexTest do
       g = Graph.new()
       refute Graph.has_vertex?(g, @valid_id)
 
-      n = Vertex.new(g, @valid_id, @valid_label, @valid_props)
+      v = Vertex.new(g, @valid_id, @valid_label, @valid_props)
 
-      assert Graph.has_vertex?(n.graph, @valid_id)
-      assert Vertex.label(n) == @valid_label
-      assert Vertex.properties(n) == @valid_props
+      assert Graph.has_vertex?(v.graph, @valid_id)
+      assert Vertex.label(v) == @valid_label
+      assert Vertex.properties(v) == @valid_props
     end
 
     test "updates vertex in graph" do
-      n = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
-      n = Vertex.new(n.graph, @valid_id, @update_label, @update_props)
+      v = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
+      v = Vertex.new(v.graph, @valid_id, @update_label, @update_props)
 
-      assert Graph.has_vertex?(n.graph, @valid_id)
-      assert Vertex.label(n) == @update_label
-      assert Vertex.properties(n) == @update_props
+      assert Graph.has_vertex?(v.graph, @valid_id)
+      assert Vertex.label(v) == @update_label
+      assert Vertex.properties(v) == @update_props
     end
   end
 
   describe "from/2" do
     test "returns struct" do
       %Vertex{graph: g} = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
-      n = Vertex.from(g, @valid_id)
+      v = Vertex.from(g, @valid_id)
 
-      assert %Vertex{id: @valid_id, graph: ^g} = n
+      assert %Vertex{id: @valid_id, graph: ^g} = v
     end
 
     test "raises on absent vertex id" do
@@ -57,128 +57,128 @@ defmodule Age.VertexTest do
 
   describe "alias/1" do
     test "returns alias" do
-      n = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props, :a)
-      assert Vertex.alias(n) == :a
+      v = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props, :a)
+      assert Vertex.alias(v) == :a
 
-      n = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props, "a")
-      assert Vertex.alias(n) == "a"
+      v = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props, "a")
+      assert Vertex.alias(v) == "a"
 
-      n = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
-      assert is_nil(Vertex.alias(n))
+      v = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
+      assert is_nil(Vertex.alias(v))
     end
 
     test "raises if key not found" do
       g = Graph.new() |> Graph.add_vertex(@valid_id, %{})
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise KeyError, fn ->
-        Vertex.alias(n)
+        Vertex.alias(v)
       end
     end
 
     test "raises on bad graph vertex labels" do
       g = Graph.new() |> Graph.add_vertex(@valid_id)
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise EmptyVertexLabelsError, fn ->
-        Vertex.alias(n)
+        Vertex.alias(v)
       end
 
       g = Graph.new() |> Graph.add_vertex(@valid_id, [%{}, %{}])
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise MultipleVertexLabelsError, fn ->
-        Vertex.alias(n)
+        Vertex.alias(v)
       end
     end
   end
 
   describe "label/1" do
     test "returns label" do
-      n = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
+      v = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
 
-      assert Vertex.label(n) == @valid_label
+      assert Vertex.label(v) == @valid_label
     end
 
     test "raises if key not found" do
       g = Graph.new() |> Graph.add_vertex(@valid_id, %{})
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise KeyError, fn ->
-        Vertex.label(n)
+        Vertex.label(v)
       end
     end
 
     test "raises on bad graph vertex labels" do
       g = Graph.new() |> Graph.add_vertex(@valid_id)
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise EmptyVertexLabelsError, fn ->
-        Vertex.label(n)
+        Vertex.label(v)
       end
 
       g = Graph.new() |> Graph.add_vertex(@valid_id, [%{}, %{}])
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise MultipleVertexLabelsError, fn ->
-        Vertex.label(n)
+        Vertex.label(v)
       end
     end
   end
 
   describe "properties/1" do
     test "returns properties" do
-      n = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
+      v = Vertex.new(Graph.new(), @valid_id, @valid_label, @valid_props)
 
-      assert Vertex.properties(n) == @valid_props
+      assert Vertex.properties(v) == @valid_props
     end
 
     test "raises if key not found" do
       g = Graph.new() |> Graph.add_vertex(@valid_id, %{})
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise KeyError, fn ->
-        Vertex.properties(n)
+        Vertex.properties(v)
       end
     end
 
     test "raises on bad graph vertex labels" do
       g = Graph.new() |> Graph.add_vertex(@valid_id)
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise EmptyVertexLabelsError, fn ->
-        Vertex.properties(n)
+        Vertex.properties(v)
       end
 
       g = Graph.new() |> Graph.add_vertex(@valid_id, [%{}, %{}])
-      n = %Vertex{id: @valid_id, graph: g}
+      v = %Vertex{id: @valid_id, graph: g}
 
       assert_raise MultipleVertexLabelsError, fn ->
-        Vertex.properties(n)
+        Vertex.properties(v)
       end
     end
   end
 
   describe "to_cypher/1" do
     test "works with alias" do
-      n = Vertex.new(Graph.new(), 123, "Vertex", %{}, :n)
-      assert Vertex.to_cypher(n) == "(n:Vertex)"
+      v = Vertex.new(Graph.new(), 123, "Vertex", %{}, :v)
+      assert Vertex.to_cypher(v) == "(v:Vertex)"
 
-      n = Vertex.new(Graph.new(), 123, "Vertex", %{b: true, f: 1.1, i: 1, s: "a"}, :n)
-      assert Vertex.to_cypher(n) == "(n:Vertex {b:true,f:1.1,i:1,s:'a'})"
+      v = Vertex.new(Graph.new(), 123, "Vertex", %{b: true, f: 1.1, i: 1, s: "a"}, :v)
+      assert Vertex.to_cypher(v) == "(v:Vertex {b:true,f:1.1,i:1,s:'a'})"
     end
 
     test "works with given alias" do
-      n = Vertex.new(Graph.new(), 123, "Vertex", %{b: true, f: 1.1, i: 1, s: "a"})
-      assert Vertex.to_cypher(n, :n) == "(n:Vertex {b:true,f:1.1,i:1,s:'a'})"
-      assert Vertex.to_cypher(n, "n") == "(n:Vertex {b:true,f:1.1,i:1,s:'a'})"
+      v = Vertex.new(Graph.new(), 123, "Vertex", %{b: true, f: 1.1, i: 1, s: "a"})
+      assert Vertex.to_cypher(v, :v) == "(v:Vertex {b:true,f:1.1,i:1,s:'a'})"
+      assert Vertex.to_cypher(v, "v") == "(v:Vertex {b:true,f:1.1,i:1,s:'a'})"
     end
 
     test "raises without alias" do
-      n = Vertex.new(Graph.new(), 123, "Vertex", %{b: true, f: 1.1, i: 1, s: "a"})
+      v = Vertex.new(Graph.new(), 123, "Vertex", %{b: true, f: 1.1, i: 1, s: "a"})
 
       assert_raise ArgumentError, fn ->
-        assert Vertex.to_cypher(n)
+        assert Vertex.to_cypher(v)
       end
     end
   end
