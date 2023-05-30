@@ -5,6 +5,8 @@ defmodule PostgrexAgtype.Extension do
 
   @behaviour Postgrex.Extension
 
+  alias Age.{Edge, Graph, Vertex}
+
   @impl true
   def format(_), do: :binary
 
@@ -53,7 +55,7 @@ defmodule PostgrexAgtype.Extension do
   end
 
   @spec handle_agtype(String.t(), module()) ::
-          Graph.t() | map() | list() | String.t() | integer() | float() | boolean()
+          Age.entity() | map() | list() | String.t() | integer() | float() | boolean()
   def handle_agtype(json, lib) do
     result =
       json
@@ -63,69 +65,63 @@ defmodule PostgrexAgtype.Extension do
 
     cond do
       is_list(result) ->
-        build_path(result)
+        build_graph(result)
 
       is_map(result) and Map.has_key?(result, "_agtype") ->
-        convert_agtype(result, Graph.new())
+        convert_agtype(result)
 
       true ->
         replace_decimal_values(result)
     end
   end
 
-  @spec build_path(list()) :: Graph.t()
-  defp build_path(path), do: build_path(path, [], Graph.new())
+  @spec build_graph(list(), Graph.t()) :: Graph.t()
+  def build_graph(entities, graph \\ %Graph{})
 
-  @spec build_path(list(), list(), Graph.t()) :: Graph.t()
-  defp build_path([], [], graph), do: graph
+  def build_graph([], graph), do: graph
 
-  defp build_path([], [edge | rest], graph) do
-    graph = convert_agtype(edge, graph)
+  def build_graph([entity | rest], graph) do
+    graph =
+      case convert_agtype(entity) do
+        %Edge{} = edge ->
+          Graph.add_edge(graph, edge)
 
-    build_path([], rest, graph)
+        %Vertex{} = vertex ->
+          Graph.add_vertex(graph, vertex)
+      end
+
+    build_graph(rest, graph)
   end
 
-  defp build_path([entity | rest], edges, graph) do
-    case Map.fetch(entity, "_agtype") do
-      {:ok, "vertex"} ->
-        graph = convert_agtype(entity, graph)
-
-        build_path(rest, edges, graph)
-
-      {:ok, "edge"} ->
-        build_path(rest, [entity | edges], graph)
-
-      :error ->
-        raise ArgumentError, "_agtype key not found"
-    end
+  @spec convert_agtype(map()) :: Age.entity()
+  defp convert_agtype(%{"_agtype" => "vertex"} = entity) do
+    %Vertex{
+      id: entity["id"],
+      label: entity["label"],
+      properties: replace_decimal_values(entity["properties"])
+    }
   end
 
-  @spec convert_agtype(map(), Graph.t()) :: Graph.t()
-  defp convert_agtype(%{"_agtype" => "vertex"} = entity, graph) do
-    label =
-      entity
-      |> Map.take(["label", "properties"])
-      |> replace_decimal_values()
-
-    Graph.add_vertex(graph, Map.fetch!(entity, "id"), label)
+  defp convert_agtype(%{"_agtype" => "edge"} = entity) do
+    %Edge{
+      v1: entity["start_id"],
+      v2: entity["end_id"],
+      id: entity["id"],
+      label: entity["label"],
+      properties: replace_decimal_values(entity["properties"])
+    }
   end
 
-  defp convert_agtype(%{"_agtype" => "edge"} = entity, graph) do
-    label =
-      entity
-      |> Map.drop(["_agtype", "start_id", "end_id"])
-      |> replace_decimal_values()
+  defp convert_agtype(entity),
+    do: raise ArgumentError, "_agtype key not found in #{inspect(entity)}"
 
-    edge =
-      Graph.Edge.new(
-        Map.fetch!(entity, "start_id"),
-        Map.fetch!(entity, "end_id"),
-        label: label
-      )
+  @doc """
+  Translates PostgreSQL numeric (as indicated by AGE with `::numeric` cast) to
+  Decimal.
 
-    Graph.add_edge(graph, edge)
-  end
-
+  Exported because extension code is macro-based, so this will be called from
+  other modules.
+  """
   @spec handle_agtype_numeric(String.t()) :: Decimal.t()
   def handle_agtype_numeric(json) do
     json
@@ -140,6 +136,7 @@ defmodule PostgrexAgtype.Extension do
     |> String.replace(~r/}::(vertex|edge)/, ~s(,"_agtype":"\\1"}))
   end
 
+  @spec replace_decimal_values(map()) :: map()
   defp replace_decimal_values(map) do
     Enum.reduce(map, %{}, fn
       {k, v}, m when is_map(v) ->

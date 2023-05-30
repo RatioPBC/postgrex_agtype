@@ -1,6 +1,8 @@
 defmodule PostgrexAgtype.ExtensionTest do
   use PostgrexAgtype.DataCase
 
+  alias Age.{Edge, Graph, Vertex}
+
   setup [:setup_postgrex, :create_graph]
 
   def test_cypher_query(context) do
@@ -218,9 +220,7 @@ defmodule PostgrexAgtype.ExtensionTest do
            WITH {id: 0, label: "label_name", properties: {i: 0}}::vertex as v
            RETURN v
          """,
-         expected:
-           Graph.new()
-           |> Graph.add_vertex(0, %{"label" => "label_name", "properties" => %{"i" => 0}})
+         expected: %Vertex{id: 0, label: "label_name", properties: %{"i" => 0}}
     test "casting map to vertex", ctx do
       test_cypher_query(ctx)
     end
@@ -229,13 +229,7 @@ defmodule PostgrexAgtype.ExtensionTest do
          WITH {id: 2, start_id: 0, end_id: 1, label: "label_name", properties: {i: 0}}::edge as e
          RETURN e
          """,
-         expected:
-           Graph.new()
-           |> Graph.add_edge(
-             Graph.Edge.new(0, 1,
-               label: %{"id" => 2, "label" => "label_name", "properties" => %{"i" => 0}}
-             )
-           )
+         expected: %Edge{id: 2, v1: 0, v2: 1, label: "label_name", properties: %{"i" => 0}}
     test "casting map to edge", ctx do
       test_cypher_query(ctx)
     end
@@ -243,25 +237,16 @@ defmodule PostgrexAgtype.ExtensionTest do
     @tag cypher: """
          WITH [
            {id: 0, label: "label_name_1", properties: {i: 0}}::vertex,
-           {id: 2, start_id: 0, end_id: 1, label: "edge_label", properties: {i: 0}}::edge,
+           {id: 2, start_id: 0, end_id: 1, label: "edge_label", properties: {i: 1}}::edge,
            {id: 1, label: "label_name_2", properties: {}}::vertex
          ]::path as p
          RETURN p
          """,
          expected:
-           Graph.new()
-           |> Graph.add_vertex(0, %{"label" => "label_name_1", "properties" => %{"i" => 0}})
-           |> Graph.add_vertex(1, %{"label" => "label_name_2", "properties" => %{}})
-           |> Graph.add_edge(
-             Graph.Edge.new(0, 1,
-               id: 2,
-               label: %{
-                 "id" => 2,
-                 "label" => "edge_label",
-                 "properties" => %{"i" => 0}
-               }
-             )
-           )
+           %Graph{}
+           |> Graph.add_vertex(0, "label_name_1", %{"i" => 0})
+           |> Graph.add_vertex(1, "label_name_2")
+           |> Graph.add_edge(0, 1, 2, "edge_label", %{"i" => 1})
     test "casting list to path", ctx do
       test_cypher_query(ctx)
     end
@@ -302,102 +287,64 @@ defmodule PostgrexAgtype.ExtensionTest do
       %Postgrex.Result{rows: [[observed]]} = Postgrex.query!(conn, query, [])
 
       expected =
-        Graph.new()
-        |> Graph.add_vertex(alpha_id, %{"label" => "Alpha", "properties" => %{}})
-        |> Graph.add_vertex(bid1, %{"label" => "Beta", "properties" => %{"bid" => 1}})
-        |> Graph.add_vertex(bid2, %{"label" => "Beta", "properties" => %{"bid" => 2}})
-        |> Graph.add_edge(bid1, alpha_id,
-          label: %{"id" => eid1, "label" => "Rel", "properties" => %{}}
-        )
-        |> Graph.add_edge(bid2, alpha_id,
-          label: %{"id" => eid2, "label" => "Rel", "properties" => %{}}
-        )
+        %Graph{}
+        |> Graph.add_vertex(bid1, "Beta", %{"bid" => 1})
+        |> Graph.add_vertex(alpha_id, "Alpha", %{})
+        |> Graph.add_vertex(bid2, "Beta", %{"bid" => 2})
+        |> Graph.add_edge(bid1, alpha_id, eid1, "Rel")
+        |> Graph.add_edge(bid2, alpha_id, eid2, "Rel")
 
       assert expected == observed
     end
 
-    test "returns a graph for each row in result", %{conn: conn, graph_name: graph_name} do
+    test "returns an entity for each row in result", %{conn: conn, graph_name: graph_name} do
       create_alpha_query = """
       SELECT *
       FROM cypher('#{graph_name}', $$
-        CREATE (a:Alpha)
-        RETURN ID(a)
+        CREATE (a:Alpha)-[e:Edge]->(b:Beta {bid: 1})
+        RETURN [ID(a), ID(e), ID(b)]
       $$) AS (result agtype)
       """
 
-      %Postgrex.Result{rows: [[alpha_id]]} = Postgrex.query!(conn, create_alpha_query, [])
+      %Postgrex.Result{rows: [[[alpha_id, bedge_id, beta_id]]]} =
+        Postgrex.query!(conn, create_alpha_query, [])
 
-      create_beta_query = """
+      create_gamma_query = """
       SELECT *
       FROM cypher('#{graph_name}', $$
-        CREATE (b:Beta {bid: 1})
-        RETURN ID(b)
+        MATCH (a:Alpha)
+        CREATE (g:Gamma {gid: 1})-[e:Edge]->(a)
+        RETURN [ID(g), ID(e)]
       $$) AS (result agtype)
       """
 
-      %Postgrex.Result{rows: [[beta_id]]} = Postgrex.query!(conn, create_beta_query, [])
+      %Postgrex.Result{rows: [[[gamma_id, gedge_id]]]} =
+        Postgrex.query!(conn, create_gamma_query, [])
 
       query = """
       SELECT *
       FROM cypher('#{graph_name}', $$
-        MATCH (n)
-        RETURN n
+        MATCH (a)-[e]->(b)
+        RETURN [a, e, b]
       $$) AS (result agtype)
       """
 
       %Postgrex.Result{rows: observed} = Postgrex.query!(conn, query, [])
 
       expected = [
-        [Graph.add_vertex(Graph.new(), alpha_id, %{"label" => "Alpha", "properties" => %{}})],
         [
-          Graph.add_vertex(Graph.new(), beta_id, %{
-            "label" => "Beta",
-            "properties" => %{"bid" => 1}
-          })
+          %Graph{}
+          |> Graph.add_vertex(gamma_id, "Gamma", %{"gid" => 1})
+          |> Graph.add_vertex(alpha_id, "Alpha")
+          |> Graph.add_edge(gamma_id, alpha_id, gedge_id, "Edge")
+        ],
+        [
+          %Graph{}
+          |> Graph.add_vertex(alpha_id, "Alpha")
+          |> Graph.add_vertex(beta_id, "Beta", %{"bid" => 1})
+          |> Graph.add_edge(alpha_id, beta_id, bedge_id, "Edge")
         ]
       ]
-
-      assert expected == observed
-    end
-
-    test "returns single Graph for single edge result", %{conn: conn, graph_name: graph_name} do
-      create_alpha_query = """
-      SELECT *
-      FROM cypher('#{graph_name}', $$
-        CREATE (a:Alpha)
-        RETURN ID(a)
-      $$) AS (result agtype)
-      """
-
-      %Postgrex.Result{rows: [[alpha_id]]} = Postgrex.query!(conn, create_alpha_query, [])
-
-      create_betas_query = """
-      SELECT *
-      FROM cypher('#{graph_name}', $$
-        MATCH (a:Alpha)
-        WHERE ID(a) = #{alpha_id}
-        CREATE (b1:Beta {bid: 1})-[e1:Rel]->(a)
-        RETURN [ID(b1), ID(e1)]
-      $$) AS (result agtype)
-      """
-
-      %Postgrex.Result{rows: [[[bid, eid]]]} = Postgrex.query!(conn, create_betas_query, [])
-
-      query = """
-      SELECT *
-      FROM cypher('#{graph_name}', $$
-        MATCH (b:Beta)-[e:Rel]->(a:Alpha)
-        WHERE ID(e) = #{eid}
-        RETURN e
-      $$) AS (result agtype)
-      """
-
-      %Postgrex.Result{rows: [[observed]]} = Postgrex.query!(conn, query, [])
-
-      expected =
-        Graph.add_edge(Graph.new(), bid, alpha_id,
-          label: %{"id" => eid, "label" => "Rel", "properties" => %{}}
-        )
 
       assert expected == observed
     end

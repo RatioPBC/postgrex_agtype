@@ -5,6 +5,10 @@ defmodule PostgrexAgtype do
   A Postgrex extension to support the `agtype` of [AGE](https://age.apache.org).
   """
 
+  alias Age.{Edge, Graph, Vertex}
+
+  require Logger
+
   @doc """
   Wraps cypher query in PostgreSQL SELECT statement with optional result name,
   then calls `Postgrex.query/3`.
@@ -55,7 +59,7 @@ defmodule PostgrexAgtype do
   def cypher_query!(%Age.Query{} = query, conn_or_repo, graph, opts \\ []) do
     cypher = Age.Query.to_cypher(query)
 
-    if Keyword.get(opts, :inspect_query, false), do: IO.inspect(cypher, label: "query")
+    Logger.debug(cypher)
 
     query!(conn_or_repo, graph, cypher, opts)
   end
@@ -94,25 +98,24 @@ defmodule PostgrexAgtype do
   end
 
   defp combine_result(result) do
-    results = List.flatten(result)
-    combined = Graph.new()
-
-    Enum.reduce(results, combined, fn
-      %Graph{} = graph, combined ->
-        combined =
-          graph
-          |> Graph.vertices()
-          |> Enum.reduce(combined, &Graph.add_vertex(&2, &1, Graph.vertex_labels(graph, &1)))
-
-        graph
-        |> Graph.edges()
-        |> Enum.reduce(combined, &Graph.add_edge(&2, &1))
-
-      %Graph.Edge{} = edge, combined ->
-        Graph.add_edge(combined, edge)
-
-      other, _combined ->
-        raise ArgumentError, "`:combine` option used with non-Graph results: #{inspect(other)}"
-    end)
+    result
+    |> List.flatten()
+    |> Enum.reduce(%Graph{}, &reduce_result/2)
   end
+
+  defp reduce_result(%Edge{} = edge, combined), do: Graph.add_edge(combined, edge)
+
+  defp reduce_result(%Graph{} = graph, combined) do
+    combined
+    |> reduce_graph_vertices(graph)
+    |> reduce_graph_edges(graph)
+  end
+
+  defp reduce_result(%Vertex{} = vertex, combined), do: Graph.add_vertex(combined, vertex)
+
+  defp reduce_graph_edges(combined, %Graph{edges: edges}),
+    do: Enum.reduce(edges, combined, &Graph.add_edge(&2, &1))
+
+  defp reduce_graph_vertices(combined, %Graph{vertices: vertices}),
+    do: Enum.reduce(vertices, combined, &Graph.add_vertex(&2, &1))
 end

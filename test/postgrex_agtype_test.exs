@@ -1,6 +1,7 @@
 defmodule PostgrexAgtypeTest do
   use PostgrexAgtype.DataCase
-  # doctest PostgrexAgtype
+
+  alias Age.{Edge, Graph, Vertex}
 
   setup [:setup_postgrex, :create_graph]
 
@@ -12,9 +13,9 @@ defmodule PostgrexAgtypeTest do
       observed = PostgrexAgtype.query!(conn, graph_name, "MATCH (n) RETURN n", combine: true)
 
       expected =
-        Graph.new()
-        |> Graph.add_vertex(beta_id, %{"label" => "Beta", "properties" => %{"bid" => 1}})
-        |> Graph.add_vertex(alpha_id, %{"label" => "Alpha", "properties" => %{}})
+        %Graph{}
+        |> Graph.add_vertex(alpha_id, "Alpha")
+        |> Graph.add_vertex(beta_id, "Beta", %{"bid" => 1})
 
       assert expected == observed
     end
@@ -34,13 +35,9 @@ defmodule PostgrexAgtypeTest do
         PostgrexAgtype.query!(conn, graph_name, "MATCH ()-[e:Rel]->() RETURN e", combine: true)
 
       expected =
-        Graph.new()
-        |> Graph.add_edge(beta_id, alpha_id,
-          label: %{"id" => e1, "label" => "Rel", "properties" => %{}}
-        )
-        |> Graph.add_edge(alpha_id, beta_id,
-          label: %{"id" => e2, "label" => "Rel", "properties" => %{}}
-        )
+        %Graph{}
+        |> Graph.add_edge(beta_id, alpha_id, e1, "Rel")
+        |> Graph.add_edge(alpha_id, beta_id, e2, "Rel")
 
       assert expected == observed
     end
