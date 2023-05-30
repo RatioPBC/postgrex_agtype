@@ -3,15 +3,13 @@ defmodule Age do
   AGE - A Graph Extension for PostgreSQL.
   """
 
-  alias Age.{Edge, Vertex}
-
   @typedoc """
   `id` is the internal ID of an AGE edge or vertex. Since this must exist
   for graph integrity, the convention is to use negative IDs for unpersisted
   entities. Positive IDs therefore indicate the entity has been persisted and
   returned from a cypher query.
   """
-  @type id :: integer()
+  @type id :: pos_integer() | nil
 
   @typedoc """
   `alias` is an optional atom or string of the alias of an AGE edge or vertex,
@@ -22,12 +20,12 @@ defmodule Age do
   @typedoc """
   `label` is a string of the label of an AGE edge or vertex.
   """
-  @type label :: String.t()
+  @type label :: String.t() | nil
 
   @typedoc """
   `property_value` is all the allowed types in AGE entities.
   """
-  @type property_value :: nil | integer() | float() | Decimal.t() | boolean() | String.t()
+  @type property_value :: integer() | float() | Decimal.t() | boolean() | String.t() | nil
 
   @typedoc """
   `properties` is a map with the KV attributes of an AGE edge or vertex.
@@ -96,6 +94,25 @@ defmodule Age do
     do: if(String.at(v, pos) != "'", do: "'", else: "")
 
   @doc """
+  Translate label value to Cypher.
+
+  ## Examples
+
+      iex> Age.label_to_cypher(:Label)
+      ":Label"
+
+      iex> Age.label_to_cypher("Label")
+      ":Label"
+
+      iex> Age.label_to_cypher(nil)
+      ""
+  """
+  @spec label_to_cypher(Age.label() | nil) :: String.t()
+  def label_to_cypher(nil), do: ""
+
+  def label_to_cypher(label), do: ":" <> to_string(label)
+
+  @doc """
   Translate elixir map to Cypher KV.
 
   ## Examples
@@ -103,13 +120,24 @@ defmodule Age do
       iex> Age.map_to_cypher(%{:a => "b", "c" => 1, "d" => 1.1, "e" => false})
       " {a:'b',c:1,d:1.1,e:false}"
 
+      iex> Age.map_to_cypher(%{:a => "b", "c" => 1, "d" => 1.1, "e" => false}, [:a, "c"])
+      " {a:'b',c:1}"
+
       iex> Age.map_to_cypher(%{})
       ""
 
+      iex> Age.map_to_cypher(nil)
+      ""
+
   """
-  @spec map_to_cypher(map()) :: String.t()
-  def map_to_cypher(map) do
+  @spec map_to_cypher(map() | nil, list()) :: String.t()
+  def map_to_cypher(map, keys \\ [])
+
+  def map_to_cypher(nil, _keys), do: ""
+
+  def map_to_cypher(map, keys) do
     map
+    |> take_keys(keys)
     |> Enum.map_join(",", fn {k, v} -> "#{k}:#{quote_string(v)}" end)
     |> then(fn
       "" = props ->
@@ -120,23 +148,7 @@ defmodule Age do
     end)
   end
 
-  @doc """
-  Translate Age.Edge to Cypher KV with vertices and directional arrows.
-  """
-  @spec edge_to_cypher(Edge.t(), alias(), alias(), alias()) :: String.t()
-  def edge_to_cypher(edge, edge_alias \\ nil, v1_alias \\ nil, v2_alias \\ nil) do
-    if is_nil(edge_alias || Edge.alias(edge)), do: raise(ArgumentError, "edge alias required")
+  defp take_keys(map, []), do: map
 
-    v1 = Vertex.from(edge.graph, edge.v1)
-    if is_nil(v1_alias || Vertex.alias(v1)), do: raise(ArgumentError, "v1 alias required")
-
-    v2 = Vertex.from(edge.graph, edge.v2)
-    if is_nil(v2_alias || Vertex.alias(v2)), do: raise(ArgumentError, "v2 alias required")
-
-    v1_cypher = Vertex.to_cypher(v1, v1_alias)
-    edge_cypher = Edge.to_cypher(edge, edge_alias)
-    v2_cypher = Vertex.to_cypher(v2, v2_alias)
-
-    v1_cypher <> "-" <> edge_cypher <> "->" <> v2_cypher
-  end
+  defp take_keys(map, keys), do: Map.take(map, keys)
 end
