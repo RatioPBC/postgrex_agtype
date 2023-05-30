@@ -13,10 +13,27 @@ defmodule PostgrexAgtype.Examples.Survey do
   end
 
   def create_survey(conn, graph_name) do
-    Query.new()
-    |> Query.create(%Vertex{label: "Survey", properties: %{name: "Case Investigation"}}, :s)
-    |> Query.return(:s)
-    |> PostgrexAgtype.cypher_query!(conn, graph_name)
+    survey =
+      Query.create(%Vertex{label: "Survey", properties: %{name: "Case Investigation"}}, :s)
+      |> Query.return(:s)
+      |> PostgrexAgtype.cypher_query!(conn, graph_name)
+
+    q1 =
+      Query.match(survey, :s)
+      |> Query.create(
+        %Vertex{
+          label: "Question",
+          properties: %{
+            type: "setting",
+            key: "respondent",
+            text: "Who is providing this information?"
+          }
+        },
+        :q
+      )
+      |> Query.create(%Edge{label: "Start"}, :e, :s, :q)
+      |> Query.return([:s, :e, :q])
+      |> PostgrexAgtype.cypher_query!(conn, graph_name)
   end
 
   # def old_create_survey(conn, graph_name) do

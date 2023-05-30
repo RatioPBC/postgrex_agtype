@@ -23,21 +23,41 @@ defmodule Age.Query do
   @spec new() :: t()
   def new, do: %__MODULE__{}
 
+  # --- CREATE
+
+  @spec create(Age.entity(), Age.alias()) :: t()
+  def create(entity), do: create(entity, nil)
+
   @spec create(t(), Age.Vertex.t(), Age.alias()) :: t()
-  def create(%__MODULE__{} = query, vertex, alias \\ nil),
+  def create(%__MODULE__{} = query, vertex), do: create(query, vertex, nil)
+
+  def create(entity, alias), do: create(%__MODULE__{}, entity, alias)
+
+  def create(%__MODULE__{} = query, vertex, alias),
     do: append(query, :create, {vertex, alias})
 
   @spec create(t(), Age.Edge.t(), Age.alias(), Age.alias(), Age.alias()) :: t()
   def create(%__MODULE__{} = query, edge, alias, v1_alias, v2_alias),
     do: append(query, :create, {edge, alias, v1_alias, v2_alias})
 
+  # --- MATCH
+
+  @spec match(Age.entity(), Age.alias()) :: t()
+  def match(entity), do: match(entity, nil)
+
   @spec match(t(), Age.Vertex.t(), Age.alias()) :: t()
-  def match(%__MODULE__{} = query, vertex, alias \\ nil),
+  def match(%__MODULE__{} = query, vertex), do: match(query, vertex, nil)
+
+  def match(entity, alias), do: match(%__MODULE__{}, entity, alias)
+
+  def match(%__MODULE__{} = query, vertex, alias),
     do: append(query, :match, {vertex, alias})
 
   @spec match(t(), Age.Edge.t(), Age.alias(), Age.alias(), Age.alias()) :: t()
   def match(%__MODULE__{} = query, edge, alias, v1_alias, v2_alias),
     do: append(query, :match, {edge, alias, v1_alias, v2_alias})
+
+  # --- RETURN
 
   @spec return(t(), atom() | list()) :: t()
   def return(%__MODULE__{} = query, atom) when is_atom(atom),
