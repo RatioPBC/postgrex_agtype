@@ -76,7 +76,7 @@ defmodule Age.EdgeTest do
     end
   end
 
-  describe "from/2" do
+  describe "from/4" do
     test "returns struct" do
       %Edge{graph: g} = Edge.new(Graph.new(), 1, 2, @valid_id, @valid_label, @valid_props)
       e = Edge.from(g, 1, 2, @valid_id)

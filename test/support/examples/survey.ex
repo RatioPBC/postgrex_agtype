@@ -1,32 +1,90 @@
 defmodule PostgrexAgtype.Examples.Survey do
   @moduledoc false
 
-  # import ExCypher, only: [cypher: 1]
+  alias Age.{Edge, Query, Vertex}
 
-  alias PostgrexAgtype.DataCase
-
-  @dialyzer {:nowarn_function, setup: 0}
-
-  @graph "postgrexagtype_test"
-
-  defmacro query!(conn, do: block) do
-    quote do
-      %Postgrex.Result{rows: rows} =
-        PostgrexAgtype.query!(unquote(conn), @graph, cypher(do: unquote(block)))
-
-      case rows do
-        [[result]] ->
-          result
-
-        [] ->
-          nil
-      end
-    end
-  end
+  import PostgrexAgtype.DataCase, only: [setup_postgrex: 1, create_graph: 1]
 
   def setup do
-    %{conn: conn} = DataCase.setup_postgrex(nil)
-    DataCase.create_graph(%{conn: conn})
+    %{conn: conn} = setup_postgrex(nil)
+    %{graph_name: graph_name} = create_graph(%{conn: conn})
+
+    [conn, graph_name]
+  end
+
+  def create_survey(conn, graph_name) do
+    graph = %Age.Graph{}
+
+    survey =
+      Query.new()
+      |> Query.create(Vertex.new(graph.graph, -1, "Survey", %{name: "Case Investigation"}), :s)
+      |> Query.return(:s)
+      |> PostgrexAgtype.cypher_query!(conn, graph_name)
+      |> Vertex.from()
+
+    q1 =
+      Query.new()
+      |> Query.create(
+        Vertex.new(survey.graph, -2, "Question", %{
+          type: "setting",
+          key: "respondent",
+          text: "Who is providing this information?"
+        }),
+        :q
+      )
+      |> Query.return(:q)
+      |> PostgrexAgtype.cypher_query!(conn, graph_name)
+      |> Vertex.from()
+
+    start =
+      Query.new()
+      |> Query.match(survey, :s)
+      |> Query.match(q1, :q)
+      |> Query.create(Edge.new(q1.graph, -1, -2, -3, "Start", %{}), :e, :s, :q)
+      |> Query.return([:s, :e, :q])
+      |> PostgrexAgtype.cypher_query!(conn, graph_name)
+      |> Edge.from()
+
+    q1a1 =
+      Query.new()
+      |> Query.match(q1, :q)
+      |> Query.create(
+        Vertex.new(start.graph, -4, "Answer", %{text: "Case / Self", value: "self"}),
+        :a
+      )
+      |> Query.create(Edge.new(start.graph, -4, q1.id, -7, "Answers", %{}), :e, :a, :q)
+      |> Query.return([:a, :e, :q])
+      |> PostgrexAgtype.cypher_query!(conn, graph_name, inspect_query: true)
+
+    # q1a2 =
+    #   Query.new()
+    #   |> Query.create(
+    #     Vertex.new(q1a1.graph, -5, "Answer", %{text: "Contact", value: "contact"}),
+    #     :a
+    #   )
+    #   |> Query.return(:a)
+    #   |> PostgrexAgtype.cypher_query!(conn, graph_name)
+    #   |> Vertex.from()
+
+    # q1a3 =
+    #   Query.new()
+    #   |> Query.create(
+    #     Vertex.new(q1a2.graph, -6, "Answer", %{text: "Parent / Guardian", value: "gaurdian"}),
+    #     :a
+    #   )
+    #   |> Query.return(:a)
+    #   |> PostgrexAgtype.cypher_query!(conn, graph_name)
+    #   |> Vertex.from()
+
+    # q1a4 =
+    #   Query.new()
+    #   |> Query.create(
+    #     Vertex.new(q1a3.graph, -7, "Answer", %{text: "Other", value: "other"}),
+    #     :a
+    #   )
+    #   |> Query.return(:a)
+    #   |> PostgrexAgtype.cypher_query!(conn, graph_name)
+    #   |> Vertex.from()
 
     # query!(conn) do
     #   create(

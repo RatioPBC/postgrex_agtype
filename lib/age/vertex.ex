@@ -80,6 +80,21 @@ defmodule Age.Vertex do
   end
 
   @doc """
+  Returns struct for given graph and its single vertex. If it has more than
+  one, ArgumentError is raised.
+  """
+  @spec from(Graph.t()) :: t()
+  def from(graph) do
+    case Graph.vertices(graph) do
+      [id] ->
+        %__MODULE__{id: id, graph: graph}
+
+      _ ->
+        raise ArgumentError, "given graph has 0 or more than 1 vertex"
+    end
+  end
+
+  @doc """
   Returns the AGE vertex alias stored with this libgraph vertex.
   """
   @spec alias(t()) :: Age.alias()

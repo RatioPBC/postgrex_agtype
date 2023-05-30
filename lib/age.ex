@@ -6,9 +6,12 @@ defmodule Age do
   alias Age.{Edge, Vertex}
 
   @typedoc """
-  `id` is the internal ID of an AGE edge or vertex.
+  `id` is the internal ID of an AGE edge or vertex. Since this must exist
+  for graph integrity, the convention is to use negative IDs for unpersisted
+  entities. Positive IDs therefore indicate the entity has been persisted and
+  returned from a cypher query.
   """
-  @type id :: pos_integer()
+  @type id :: integer()
 
   @typedoc """
   `alias` is an optional atom or string of the alias of an AGE edge or vertex,
@@ -22,9 +25,17 @@ defmodule Age do
   @type label :: String.t()
 
   @typedoc """
+  `property_value` is all the allowed types in AGE entities.
+  """
+  @type property_value :: nil | integer() | float() | Decimal.t() | boolean() | String.t()
+
+  @typedoc """
   `properties` is a map with the KV attributes of an AGE edge or vertex.
   """
-  @type properties :: %{optional(String.t()) => term()}
+  @type properties :: %{
+    optional(atom()) => property_value(),
+    optional(String.t()) => property_value()
+  }
 
   @doc """
   Surround properties with curly brackets and leading space, if needed.

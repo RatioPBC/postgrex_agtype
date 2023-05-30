@@ -52,6 +52,14 @@ defmodule PostgrexAgtype do
     |> handle_postgrex_result(opts)
   end
 
+  def cypher_query!(%Age.Query{} = query, conn_or_repo, graph, opts \\ []) do
+    cypher = Age.Query.to_cypher(query)
+
+    if Keyword.get(opts, :inspect_query, false), do: IO.inspect(cypher, label: "query")
+
+    query!(conn_or_repo, graph, cypher, opts)
+  end
+
   # ---
 
   def wrap_query(query, graph),
@@ -69,7 +77,23 @@ defmodule PostgrexAgtype do
 
   # ---
 
-  defp maybe_combine_result(result, combine: true) do
+  defp maybe_combine_result(result, opts) do
+    if Keyword.get(opts, :combine, false) do
+      combine_result(result)
+    else
+      extract_result(result)
+    end
+  end
+
+  defp extract_result(result) do
+    case result do
+      [[result]] -> result
+      [result] -> result
+      _ -> result
+    end
+  end
+
+  defp combine_result(result) do
     results = List.flatten(result)
     combined = Graph.new()
 
@@ -90,19 +114,5 @@ defmodule PostgrexAgtype do
       other, _combined ->
         raise ArgumentError, "`:combine` option used with non-Graph results: #{inspect(other)}"
     end)
-  end
-
-  defp maybe_combine_result(result, []) do
-    case result do
-      [[result]] -> result
-      [result] -> result
-      _ -> result
-    end
-  end
-
-  defmacro cypher(graph, query) do
-    quote do
-      fragment("cypher(?, ?) AS (result agtype)", unquote(graph), unquote(query))
-    end
   end
 end

@@ -67,6 +67,21 @@ defmodule Age.Edge do
   end
 
   @doc """
+  Returns struct for given graph and its single edge. If it has more than
+  one, ArgumentError is raised.
+  """
+  @spec from(Graph.t()) :: t()
+  def from(graph) do
+    case Graph.edges(graph) do
+      [%Graph.Edge{v1: v1, v2: v2, label: %{"id" => id}}] ->
+        %__MODULE__{id: id, graph: graph, v1: v1, v2: v2}
+
+      _ ->
+        raise ArgumentError, "given graph has 0 or more than 1 edge"
+    end
+  end
+
+  @doc """
   Returns the AGE edge alias stored with this libgraph edge.
   """
   @spec alias(t()) :: Age.alias()
@@ -98,7 +113,13 @@ defmodule Age.Edge do
   end
 
   @doc """
-  Generate cypher for this Edge.
+  Generate cypher for only this Edge.
+
+  ## Examples
+
+      iex> Age.Edge.to_cypher(edge, :e)
+      "[e:Label {key:'value',other:123}]"
+
   """
   @spec to_cypher(t(), Age.alias()) :: String.t()
   def to_cypher(%__MODULE__{} = edge, alias \\ nil) do
@@ -111,5 +132,19 @@ defmodule Age.Edge do
       |> Age.map_to_cypher()
 
     "[" <> to_string(alias) <> ":" <> label(edge) <> props <> "]"
+  end
+
+  @doc """
+  Generate cypher for this Edge with given vertex aliases and arrows.
+
+  ## Examples
+
+      iex> Age.Edge.to_cypher(edge, :e, :x, "y")
+      "(x)-[e:Label {key:'value',other:123}]->(y)"
+
+  """
+  @spec to_cypher(t(), Age.alias(), Age.alias(), Age.alias()) :: String.t()
+  def to_cypher(%__MODULE__{} = edge, alias, v1_alias, v2_alias) do
+    "(#{v1_alias})-" <> to_cypher(edge, alias) <> "->(#{v2_alias})"
   end
 end
