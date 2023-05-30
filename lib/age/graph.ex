@@ -25,9 +25,9 @@ defmodule Age.Graph do
     }
   end
 
-  @spec add_vertex(t(), Age.id(), Age.label(), Age.properties(), Age.alias()) :: t()
-  def add_vertex(%__MODULE__{} = graph, id, label, properties \\ %{}, alias \\ nil) do
-    add_vertex(graph, %Vertex{id: id, label: label, properties: properties, alias: alias})
+  @spec add_vertex(t(), Age.id(), Age.label(), Age.properties()) :: t()
+  def add_vertex(%__MODULE__{} = graph, id, label, properties \\ %{}) do
+    add_vertex(graph, %Vertex{id: id, label: label, properties: properties})
   end
 
   @doc """
@@ -42,16 +42,15 @@ defmodule Age.Graph do
     }
   end
 
-  @spec add_edge(t(), Age.id(), Age.id(), Age.id(), Age.label(), Age.properties(), Age.alias()) ::
+  @spec add_edge(t(), Age.id(), Age.id(), Age.id(), Age.label(), Age.properties()) ::
           t()
-  def add_edge(%__MODULE__{} = graph, v1, v2, id, label, properties \\ %{}, alias \\ nil) do
+  def add_edge(%__MODULE__{} = graph, v1, v2, id, label, properties \\ %{}) do
     add_edge(graph, %Edge{
       v1: v1,
       v2: v2,
       id: id,
       label: label,
-      properties: properties,
-      alias: alias
+      properties: properties
     })
   end
 end

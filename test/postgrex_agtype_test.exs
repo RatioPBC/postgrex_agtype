@@ -1,7 +1,7 @@
 defmodule PostgrexAgtypeTest do
   use PostgrexAgtype.DataCase
 
-  alias Age.{Edge, Graph, Vertex}
+  alias Age.Graph
 
   setup [:setup_postgrex, :create_graph]
 

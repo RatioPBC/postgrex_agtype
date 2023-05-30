@@ -126,14 +126,11 @@ defmodule Age do
       iex> Age.map_to_cypher(%{})
       ""
 
-      iex> Age.map_to_cypher(nil)
-      ""
-
   """
   @spec map_to_cypher(map() | nil, list()) :: String.t()
   def map_to_cypher(map, keys \\ [])
 
-  def map_to_cypher(nil, _keys), do: ""
+  def map_to_cypher(map, _keys) when map == %{}, do: ""
 
   def map_to_cypher(map, keys) do
     map

@@ -3,12 +3,11 @@ defmodule Age.Edge do
   Struct representing an Edge in an AGE graph.
   """
 
-  defstruct [:id, :v1, :v2, :alias, :label, properties: %{}]
+  defstruct [:id, :v1, :v2, :label, properties: %{}]
 
   @type weight :: integer() | float()
 
   @type t :: %__MODULE__{
-          alias: Age.alias(),
           id: Age.id(),
           v1: Age.id(),
           v2: Age.id(),
@@ -27,9 +26,6 @@ defmodule Age.Edge do
   """
   @spec to_cypher(t(), Age.alias(), list()) :: String.t()
   def to_cypher(%__MODULE__{} = edge, alias \\ nil, keys \\ []) do
-    alias = alias || edge.alias
-    if is_nil(alias), do: raise(ArgumentError, "edge alias value required")
-
     label = Age.label_to_cypher(edge.label)
     properties = Age.map_to_cypher(edge.properties, keys)
 
