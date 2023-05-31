@@ -14,12 +14,14 @@ defmodule PostgrexAgtype.Examples.Survey do
 
   def create_survey(conn, graph_name) do
     survey =
-      Query.create(%Vertex{label: "Survey", properties: %{name: "Case Investigation"}}, :s)
+      %Query{}
+      |> Query.create(%Vertex{label: "Survey", properties: %{name: "Case Investigation"}}, :s)
       |> Query.return(:s)
       |> PostgrexAgtype.cypher_query!(conn, graph_name)
 
     q1 =
-      Query.match(survey, :s)
+      %Query{}
+      |> Query.match(survey, :s)
       |> Query.create(
         %Vertex{
           label: "Question",
@@ -32,8 +34,57 @@ defmodule PostgrexAgtype.Examples.Survey do
         :q
       )
       |> Query.create(%Edge{label: "Start"}, :e, :s, :q)
-      |> Query.return([:s, :e, :q])
+      |> Query.return(:q)
       |> PostgrexAgtype.cypher_query!(conn, graph_name)
+
+    %Query{}
+    |> Query.match(q1, :q)
+    |> Query.create(
+      %Vertex{
+        label: "Answer",
+        properties: %{
+          text: "Case / Self",
+          value: "self"
+        }
+      },
+      :a1
+    )
+    |> Query.create(
+      %Vertex{
+        label: "Answer",
+        properties: %{
+          text: "Contact",
+          value: "contact"
+        }
+      },
+      :a2
+    )
+    |> Query.create(
+      %Vertex{
+        label: "Answer",
+        properties: %{
+          text: "Parent / Guardian",
+          value: "guardian"
+        }
+      },
+      :a3
+    )
+    |> Query.create(
+      %Vertex{
+        label: "Answer",
+        properties: %{
+          text: "Other",
+          value: "other"
+        }
+      },
+      :a4
+    )
+    |> Query.create(%Edge{label: "Answers"}, :q1a1, :a1, :q)
+    |> Query.create(%Edge{label: "Answers"}, :q1a2, :a2, :q)
+    |> Query.create(%Edge{label: "Answers"}, :q1a3, :a3, :q)
+    |> Query.create(%Edge{label: "Answers"}, :q1a4, :a4, :q)
+    |> Query.return([:q, :a1, :a2, :a3, :a4, :q1a1, :q1a2, :q1a3, :q1a4])
+    |> PostgrexAgtype.cypher_query!(conn, graph_name)
   end
 
   # def old_create_survey(conn, graph_name) do

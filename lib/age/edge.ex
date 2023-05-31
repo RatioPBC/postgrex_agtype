@@ -3,11 +3,12 @@ defmodule Age.Edge do
   Struct representing an Edge in an AGE graph.
   """
 
-  defstruct [:id, :v1, :v2, :label, properties: %{}]
+  defstruct [:alias, :id, :v1, :v2, :label, properties: %{}]
 
   @type weight :: integer() | float()
 
   @type t :: %__MODULE__{
+          alias: Age.alias(),
           id: Age.id(),
           v1: Age.id(),
           v2: Age.id(),
@@ -29,7 +30,7 @@ defmodule Age.Edge do
     label = Age.label_to_cypher(edge.label)
     properties = Age.map_to_cypher(edge.properties, keys)
 
-    "[" <> to_string(alias) <> label <> properties <> "]"
+    "[" <> to_string(alias || edge.alias) <> label <> properties <> "]"
   end
 
   @doc """

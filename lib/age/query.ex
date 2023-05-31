@@ -25,14 +25,7 @@ defmodule Age.Query do
 
   # --- CREATE
 
-  @spec create(Age.entity(), Age.alias()) :: t()
-  def create(entity), do: create(entity, nil)
-
   @spec create(t(), Age.Vertex.t(), Age.alias()) :: t()
-  def create(%__MODULE__{} = query, vertex), do: create(query, vertex, nil)
-
-  def create(entity, alias), do: create(%__MODULE__{}, entity, alias)
-
   def create(%__MODULE__{} = query, vertex, alias),
     do: append(query, :create, {vertex, alias})
 
@@ -42,14 +35,7 @@ defmodule Age.Query do
 
   # --- MATCH
 
-  @spec match(Age.entity(), Age.alias()) :: t()
-  def match(entity), do: match(entity, nil)
-
   @spec match(t(), Age.Vertex.t(), Age.alias()) :: t()
-  def match(%__MODULE__{} = query, vertex), do: match(query, vertex, nil)
-
-  def match(entity, alias), do: match(%__MODULE__{}, entity, alias)
-
   def match(%__MODULE__{} = query, vertex, alias),
     do: append(query, :match, {vertex, alias})
 

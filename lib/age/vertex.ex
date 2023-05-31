@@ -3,9 +3,10 @@ defmodule Age.Vertex do
   Struct representing a Vertex in an AGE graph.
   """
 
-  defstruct [:id, :label, properties: %{}]
+  defstruct [:alias, :id, :label, properties: %{}]
 
   @type t :: %__MODULE__{
+          alias: Age.alias(),
           id: Age.id(),
           label: Age.label(),
           properties: Age.properties()
@@ -19,6 +20,6 @@ defmodule Age.Vertex do
     label = Age.label_to_cypher(vertex.label)
     properties = Age.map_to_cypher(vertex.properties, keys)
 
-    "(" <> to_string(alias) <> label <> properties <> ")"
+    "(" <> to_string(alias || vertex.alias) <> label <> properties <> ")"
   end
 end
